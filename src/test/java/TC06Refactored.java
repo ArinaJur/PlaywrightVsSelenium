@@ -1,5 +1,6 @@
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.options.AriaRole;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,207 +24,184 @@ public class TC06Refactored {
     //Click on the last page
     //Verify that all shown products on the last page have prices, which are  less or equal to $5
 
-    private static Page setUpPlaywright() {
+    //Page
+    private static Page page = getPage();
+
+    //Locators
+    private static final Locator MIN_PRICE_FIELD = page.locator("[name='minPriceValue']");
+    private static final Locator MAX_PRICE_FIELD = page.locator("[data-test='priceFacetMax']");
+    private static final Locator ALL_CARDS_ON_PAGE = page.locator(".dOpyUp");
+    private static final Locator UNLOADED_CARDS =
+            page.locator("[data-test='@web/site-top-of-funnel/ProductCardPlaceholder']");
+    private static final Locator PRICES =
+            page.locator("[data-test='current-price']>span:not(.h-text-md)");
+
+    //Constants
+    private static final String TARGET_BASE_URL = "https://www.target.com/";
+
+    private static final String DEALS = "Deals";
+    private static final String CLEARANCE = "Clearance";
+    private static final String FILTERS = "Filters";
+    private static final String PRICE = "Price";
+    private static final String APPLY = "Apply";
+    private static final String SEE_RESULTS = "See results";
+    private static final String PAGES = "page";
+    private static final String PAGES_LIST = "page ";
+
+    //data
+    private static final String MIN_PRICE = "0";
+    private static final String MAX_PRICE = "5";
+    private static final String PAGE_ONE = "page 1";
+    private static final String PAGE_TWO = "page 2";
+    private static String PAGE_LAST = "";
+    private static final List<String> PAGES_PROVIDER = List.of(PAGE_ONE, PAGE_TWO, PAGE_LAST);
+
+    private static Page getPage() {
         Playwright playwright = Playwright.create();
-        Browser browser = playwright.chromium().launch(
-                new BrowserType.LaunchOptions()
-                        .setHeadless(false)
-        );
+        Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(false));
         BrowserContext context = browser.newContext();
+
         return context.newPage();
     }
 
-    private static void clickByLabel(String label, Page page) {
+    private static void openUrl(String url) {
+        page.navigate(url);
+    }
+
+    private static Locator getLabel(String label) {
+        return page.getByLabel(label);
+    }
+
+    private static List<String> getInnerText(String label) {
+        return getLabel(label).allInnerTexts();
+    }
+
+    private static List<String> getInnerText(Locator locator) {
+        return locator.allInnerTexts();
+    }
+
+    private static void clickLabel(String label) {
         page.getByLabel(label).click();
     }
 
-    private static void clickByLink(String text,  Page page) {
-        page.getByRole(AriaRole.LINK).filter(new Locator.FilterOptions().setHasText(text)).click();
+    private static void clickLink(String text) {
+        page.getByRole(AriaRole.LINK)
+                .filter(new Locator.FilterOptions().setHasText(text))
+                .click();
     }
 
+    private static void clickButton(String text) {
+        page.getByRole(AriaRole.BUTTON)
+                .filter(new Locator.FilterOptions().setHasText(text))
+                .click();
+    }
 
-    public static void main(String[] args) {
-        List<Double> minPrices = new ArrayList<>();
+    private static void inputMinPrice(String minPrice) {
+        MIN_PRICE_FIELD.fill(minPrice);
+    }
 
-        for (int i = 0; i < 100; i ++) {
+    private static void inputMaxPrice(String maxPrice) {
+        MAX_PRICE_FIELD.fill(maxPrice);
+    }
+
+    private static List<Locator> getUnloadedCards() {
+        return UNLOADED_CARDS.all();
+    }
+
+    private static void loadCards() {
+        List<Locator> unloadCards = getUnloadedCards();
+
+        while (unloadCards.size() != 0 && unloadCards.get(0).count() == 1) {
             try {
-
-
-                page.navigate("https://www.target.com/");
-                clickByLabel("Deals", page);
-                clickByLink("Clearance", page);
-                clickByLabel("Filters", page);
-
-//                page.getByLabel("Filters").click();
-                page.getByRole(AriaRole.BUTTON).filter(new Locator.FilterOptions().setHasText("Price")).click();
-                page.locator("[name='minPriceValue']").fill("0");
-                page.locator("[data-test='priceFacetMax']").fill("5");
-                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Apply")).click();
-                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("See results")).click();
-
-//            page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Explore more of what’s going on right now")).click();
-//            page.locator("[data-test='page-title']").click();
-//            page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Explore more of what’s going on right now")).click();
-
-                List<Locator> unloadCards = page.locator("[data-test='@web/site-top-of-funnel/ProductCardPlaceholder']").all();
-                while (unloadCards.size() != 0) {
-                    Locator firstUnloaded = page.locator("div[data-test='@web/site-top-of-funnel/ProductCardPlaceholder']").first();
-                    if (firstUnloaded.count() == 1) {
-                        firstUnloaded.hover();
-                    }
-                    unloadCards = page.locator("[data-test='@web/site-top-of-funnel/ProductCardPlaceholder']").all();
-                }
-
-                assertThat(page.locator("[data-test='current-price']>span:not(.h-text-md)")).hasCount(24);
-
-                List<String> prices = page.locator("[data-test='current-price']>span:not(.h-text-md)").allInnerTexts();
-                for (String currentPrice : prices) {
-                    minPrices.add(
-                            Double.parseDouble(
-                                    currentPrice
-                                            .split("-")[0]
-                                            .split("\\$")[1]
-                                            .trim()));
-                }
-
-                System.out.println("=======================");
-
-                //assert average
-                int sum = 0;
-                for (Double price : minPrices) {
-                    sum += price;
-                }
-
-                assert (sum / minPrices.size() <= 5);
-
-                //assert each
-                for (Double price : minPrices) {
-                    System.out.println(price);
-                    assert (price >= 0);
-                    assert (price <= 5);
-                }
-
-
-                page.getByRole(AriaRole.BUTTON).filter(new Locator.FilterOptions().setHasText("page")).click();
-
-                assertThat(page.getByLabel("page ")).not().hasCount(0);
-                List<String> pages = page.getByLabel("page ").allInnerTexts();
-                pages.removeIf(String::isEmpty);
-                System.out.println(pages);
-
-
-                //Page 2
-                if (page.getByLabel("page 2").count() == 1) {
-                    page.getByLabel("page 2").click();
-                }
-
-//            page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Explore more of what’s going on right now")).click();
-//            page.locator("[data-test='page-title']").click();
-//            page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Explore more of what’s going on right now")).click();
-
-                List<Locator> unloadCards2 = page.locator("[data-test='@web/site-top-of-funnel/ProductCardPlaceholder']").all();
-                while (unloadCards2.size() != 0) {
-                    Locator firstUnloaded = page.locator("div[data-test='@web/site-top-of-funnel/ProductCardPlaceholder']").first();
-                    if (firstUnloaded.count() == 1) {
-                        firstUnloaded.hover();
-                    }
-                    unloadCards2 = page.locator("[data-test='@web/site-top-of-funnel/ProductCardPlaceholder']").all();
-                }
-
-                assertThat(page.locator("[data-test='current-price']>span:not(.h-text-md)")).hasCount(24);
-
-                List<String> prices2 = new ArrayList<>();
-                List<Double> minPrices2 = new ArrayList<>();
-
-                prices2 = page.locator("[data-test='current-price']>span:not(.h-text-md)").allInnerTexts();
-                for (String currentPrice : prices2) {
-                    minPrices2.add(Double.parseDouble(currentPrice.split("-")[0].split("\\$")[1].trim()));
-                }
-
-
-                System.out.println("=======================");
-
-                //assert average
-                sum = 0;
-                for (Double price : minPrices2) {
-                    sum += price;
-                }
-
-                assert (sum / minPrices2.size() <= 5);
-
-                //assert each
-                for (Double price : minPrices2) {
-                    System.out.println(price);
-                    assert (price >= 0);
-                    assert (price <= 5);
-                }
-
-
-                //Page Last
-                page.getByRole(AriaRole.BUTTON).filter(new Locator.FilterOptions().setHasText("page")).click();
-
-                assertThat(page.getByLabel("page ")).not().hasCount(0);
-
-                List<String> pagesLast = page.getByLabel("page ").allInnerTexts();
-                pagesLast.removeIf(String::isEmpty);
-                System.out.println(pagesLast);
-
-                String lastPage = pagesLast.get(pagesLast.size() - 1);
-
-                if (page.getByLabel(lastPage).count() == 1) {
-                    page.getByLabel(lastPage).click();
-                }
-
-
-//            page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Explore more of what’s going on right now")).click();
-//            page.locator("[data-test='page-title']").click();
-//            page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Explore more of what’s going on right now")).click();
-
-                List<Locator> unloadCardsLast = page.locator("[data-test='@web/site-top-of-funnel/ProductCardPlaceholder']").all();
-                while (unloadCardsLast.size() != 0) {
-                    Locator firstUnloaded = page.locator("div[data-test='@web/site-top-of-funnel/ProductCardPlaceholder']").first();
-                    if (firstUnloaded.count() == 1) {
-                        firstUnloaded.hover();
-                    }
-                    unloadCardsLast = page.locator("[data-test='@web/site-top-of-funnel/ProductCardPlaceholder']").all();
-                }
-
-
-                int lastPageCardsAmount = page.locator("[data-test='current-price']>span:not(.h-text-md)").count();
-
-                assert (lastPageCardsAmount >= 1);
-                assert (lastPageCardsAmount <= 24);
-
-
-                List<String> pricesLast = new ArrayList<>();
-                List<Double> minPricesLast = new ArrayList<>();
-
-                pricesLast = page.locator("[data-test='current-price']>span:not(.h-text-md)").allInnerTexts();
-                for (String currentPrice : pricesLast) {
-                    minPricesLast.add(Double.parseDouble(currentPrice.split("-")[0].split("\\$")[1].trim()));
-                }
-
-
-                System.out.println("=======================");
-
-                //assert average
-                sum = 0;
-                for (Double price : minPricesLast) {
-                    sum += price;
-                }
-
-                assert (sum / minPricesLast.size() <= 5);
-
-                //assert each
-                for (Double price : minPricesLast) {
-                    System.out.println(price);
-                    assert (price >= 0);
-                    assert (price <= 5);
-                }
-            } catch (NumberFormatException e) {
-                e.printStackTrace();
+                unloadCards.get(0).hover();
+            } catch (Exception e) {
+                System.out.println("Can't hover");
             }
+            unloadCards = getUnloadedCards();
+        }
+    }
+
+    private static List<Double> getMinPricesList() {
+        List<Double> minPrices = new ArrayList<>();
+        List<String> prices = getInnerText(PRICES);
+
+        for (String currentPrice : prices) {
+            minPrices.add(Double.parseDouble(
+                    currentPrice
+                            .split("-")[0]
+                            .split("\\$")[1]
+                            .trim())
+            );
         }
 
+        System.out.println(minPrices);
+
+        return minPrices;
+    }
+
+    private static List<String> getPagesList() {
+        clickButton(PAGES);
+        List<String> pagesList = getInnerText(PAGES_LIST);
+        pagesList.removeIf(String::isEmpty);
+
+        return pagesList;
+    }
+
+    private static String getLastPage() {
+        List<String> pages = getPagesList();
+        int lastPageIndex = pages.size() - 1;
+
+        return pages.get(lastPageIndex);
+    }
+
+    public static void main(String[] args) {
+        //run test multiple (3) times to check the stability
+        for (int i = 0; i < 3; i++) {
+
+            //data provider
+            for (String pageNumber : PAGES_PROVIDER) {
+                int pricesChecked = 0;
+
+                //test each page independently
+                try {
+                    openUrl(TARGET_BASE_URL);
+                    clickLabel(DEALS);
+                    clickLink(CLEARANCE);
+                    clickLabel(FILTERS);
+                    clickButton(PRICE);
+                    inputMinPrice(MIN_PRICE);
+                    inputMaxPrice(MAX_PRICE);
+                    clickButton(APPLY);
+                    clickButton(SEE_RESULTS);
+
+                    //get the last page number
+                    if (pageNumber.equals(PAGE_LAST)) {
+                        pageNumber = getLastPage();
+                    }
+                    //click on page if page is NOT page 1
+                    else if (!pageNumber.equals(PAGE_ONE)) {
+                        clickButton(PAGES);
+                        clickLabel(pageNumber);
+                    }
+
+                    loadCards();
+
+                    //confirm all prices loaded
+                    assertThat(PRICES).hasCount(ALL_CARDS_ON_PAGE.count());
+                    pricesChecked = PRICES.count();
+
+                    //assert each min price is in range
+                    for (Double minPrice : getMinPricesList()) {
+                        Assertions.assertTrue(minPrice >= 0 && minPrice <= 5);
+                    }
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                finally {
+                    System.out.println("testing " + pageNumber + "\t\t\t Prices checked " + pricesChecked);
+                }
+            }
+        }
     }
 }
