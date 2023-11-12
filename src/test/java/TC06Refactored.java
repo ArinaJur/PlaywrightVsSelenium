@@ -53,7 +53,7 @@ public class TC06Refactored {
     private static final String MAX_PRICE = "5";
     private static final String PAGE_ONE = "page 1";
     private static final String PAGE_TWO = "page 2";
-    private static String PAGE_LAST = "";
+    private static final String PAGE_LAST = "";
     private static final List<String> PAGES_PROVIDER = List.of(PAGE_ONE, PAGE_TWO, PAGE_LAST);
 
     private static Page getPage() {
@@ -109,15 +109,15 @@ public class TC06Refactored {
     }
 
     private static void loadCards() {
-        List<Locator> unloadCards = getUnloadedCards();
+        List<Locator> unloadedCards = getUnloadedCards();
 
-        while (unloadCards.size() != 0 && unloadCards.get(0).count() == 1) {
+        while (unloadedCards.size() != 0 && unloadedCards.get(0).count() == 1) {
             try {
-                unloadCards.get(0).hover();
+                unloadedCards.get(0).hover();
             } catch (Exception e) {
                 System.out.println("Can't hover");
             }
-            unloadCards = getUnloadedCards();
+            unloadedCards = getUnloadedCards();
         }
     }
 
@@ -130,10 +130,8 @@ public class TC06Refactored {
                     currentPrice
                             .split("-")[0]
                             .split("\\$")[1]
-                            .trim())
-            );
+                            .trim()));
         }
-
         System.out.println(minPrices);
 
         return minPrices;
@@ -200,6 +198,7 @@ public class TC06Refactored {
                 }
                 finally {
                     System.out.println("testing " + pageNumber + "\t\t\t Prices checked " + pricesChecked);
+                    System.out.println("================================================================");
                 }
             }
         }
