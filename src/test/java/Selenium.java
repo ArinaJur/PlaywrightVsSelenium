@@ -18,12 +18,7 @@ public class Selenium {
 
     public static void main(String[] args) throws InterruptedException {
 
-
         WebDriver driver = new ChromeDriver();
-
-
-
-
         //TC01
 //        driver.get("https://openweathermap.org/");
 //        String title = driver.getTitle();
@@ -38,12 +33,12 @@ public class Selenium {
         Thread.sleep(8000);
         WebElement currTemp = driver.findElement(By.cssSelector(".current-temp .heading"));
 
+
         System.out.println(currTemp.getText());
 
         assert(currTemp).isDisplayed();
         assert(currTemp.getText()).contains("C");
 
         driver.close();
-
     }
 }
